@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Django
+media/
+
+# Env
+emp_man_sys/
+
+# IDE
+.idea/
+.vscode/
+*.swp
