@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Forms</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background: #f0f0f0; }
+    a { color: #007bff; text-decoration: none; }
+    .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>My Forms</h2>
+  <a href="{% url 'form_builder' %}"><button class="btn" style="background:#28a745;color:white">+ New Form</button></a>
+  <a href="{% url 'profile' %}" style="margin-left:10px">Profile</a>
+  <a href="{% url 'employee_list' %}" style="margin-left:10px">Employees</a>
+  <br><br>
+
+  {% if forms %}
+  <table>
+    <tr><th>Form Name</th><th>Created</th><th>Actions</th></tr>
+    {% for form in forms %}
+    <tr>
+      <td>{{ form.name }}</td>
+      <td>{{ form.created_at|date:"d M Y" }}</td>
+      <td>
+        <a href="{% url 'employee_create' form.id %}">Create Employee</a>
+        <a href="{% url 'form_edit' form.id %}">Edit</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p>No forms yet. <a href="{% url 'form_builder' %}">Create one</a>.</p>
+  {% endif %}
+</body>
+</html>

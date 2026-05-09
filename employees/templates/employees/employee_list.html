@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Employees</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background: #f0f0f0; }
+    input[type="text"] { padding: 8px; width: 300px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 8px 14px; cursor: pointer; border: none; border-radius: 4px; }
+    a { color: #007bff; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h2>Employees</h2>
+
+  <!-- Navigation -->
+  <a href="{% url 'form_list' %}">My Forms</a> |
+  <a href="{% url 'profile' %}">Profile</a>
+  <br><br>
+
+  <!-- Search -->
+  <form method="GET">
+    <input type="text" name="q" placeholder="Search employees..." value="{{ query }}">
+    <button type="submit" style="background:#007bff;color:white">Search</button>
+    {% if query %}
+      <a href="{% url 'employee_list' %}"><button type="button">Clear</button></a>
+    {% endif %}
+  </form>
+  <br>
+
+  {% if employees %}
+  <table>
+    <tr>
+      <th>#</th>
+      <th>Form Used</th>
+      <th>Fields</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+    {% for emp in employees %}
+    <tr>
+      <td>{{ emp.id }}</td>
+      <td>{{ emp.form.name }}</td>
+      <td>
+        {% for fv in emp.field_values.all %}
+          <b>{{ fv.field.label }}:</b> {{ fv.value }}<br>
+        {% endfor %}
+      </td>
+      <td>{{ emp.created_at|date:"d M Y" }}</td>
+      <td>
+        <a href="{% url 'employee_edit' emp.id %}">Edit</a> |
+        <a href="#" onclick="deleteEmployee({{ emp.id }})" style="color:red">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p>No employees found.</p>
+  {% endif %}
+
+  <script>
+    function deleteEmployee(id) {
+      if (!confirm('Are you sure you want to delete this employee?')) return;
+
+      fetch(`/api/employees/${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        credentials: 'include',
+      })
+      .then(r => {
+        if (r.status === 204) {
+          alert('Employee deleted.');
+          location.reload();
+        }
+      });
+    }
+
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie) {
+        document.cookie.split(';').forEach(c => {
+          c = c.trim();
+          if (c.startsWith(name + '=')) cookieValue = decodeURIComponent(c.slice(name.length + 1));
+        });
+      }
+      return cookieValue;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Form Builder</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    .field-row { display: flex; gap: 10px; align-items: center; padding: 10px; margin: 6px 0;
+                 border: 1px solid #ccc; border-radius: 6px; background: #f9f9f9; cursor: grab; }
+    .field-row input, .field-row select { padding: 6px; flex: 1; }
+    .drag-handle { cursor: grab; font-size: 18px; color: #999; }
+    button { padding: 8px 16px; margin: 4px; cursor: pointer; }
+    #save-btn { background: #007bff; color: white; border: none; border-radius: 4px; }
+    #add-btn { background: #28a745; color: white; border: none; border-radius: 4px; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h2>Form Builder</h2>
+  <p id="message"></p>
+
+  <label>Form Name:</label><br>
+  <input type="text" id="form-name" placeholder="e.g. HR Onboarding Form" style="width:100%; padding:8px; margin:8px 0"><br><br>
+
+  <div id="fields-container"></div>
+
+  <br>
+  <button id="add-btn" onclick="addField()">+ Add Field</button>
+  <button id="save-btn" onclick="saveForm()">Save</button>
+  <br><br>
+  <a href="{% url 'form_list' %}">← Back to Forms</a>
+
+  <script>
+    // If editing, load existing form data
+    const EDIT_FORM_ID = {{ form.id|default:"null" }};
+    const EDIT_FORM_NAME = "{{ form.name|default:'' }}";
+
+    let dragSrcEl = null;
+
+    window.onload = function () {
+      if (EDIT_FORM_ID) {
+        document.getElementById('form-name').value = EDIT_FORM_NAME;
+        fetch(`/api/forms/${EDIT_FORM_ID}/`, {
+          headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+        })
+        .then(r => r.json())
+        .then(data => {
+          data.fields.forEach(f => addField(f.label, f.field_type));
+        });
+      }
+    };
+
+    function addField(label = '', fieldType = 'text') {
+      const container = document.getElementById('fields-container');
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      row.draggable = true;
+      row.innerHTML = `
+        <span class="drag-handle">☰</span>
+        <input type="text" placeholder="Label" value="${label}">
+        <select>
+          <option value="text" ${fieldType==='text'?'selected':''}>Text</option>
+          <option value="number" ${fieldType==='number'?'selected':''}>Number</option>
+          <option value="date" ${fieldType==='date'?'selected':''}>Date</option>
+          <option value="password" ${fieldType==='password'?'selected':''}>Password</option>
+          <option value="email" ${fieldType==='email'?'selected':''}>Email</option>
+          <option value="textarea" ${fieldType==='textarea'?'selected':''}>Textarea</option>
+        </select>
+        <button onclick="this.parentElement.remove()" style="background:red;color:white;border:none;border-radius:4px">✕</button>
+      `;
+
+      // Drag-and-drop events
+      row.addEventListener('dragstart', function () {
+        dragSrcEl = this;
+        this.style.opacity = '0.4';
+      });
+      row.addEventListener('dragend', function () {
+        this.style.opacity = '1';
+      });
+      row.addEventListener('dragover', function (e) {
+        e.preventDefault();
+      });
+      row.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (dragSrcEl !== this) {
+          // swap the two rows
+          const allRows = [...container.querySelectorAll('.field-row')];
+          const srcIdx = allRows.indexOf(dragSrcEl);
+          const tgtIdx = allRows.indexOf(this);
+          if (srcIdx < tgtIdx) {
+            container.insertBefore(dragSrcEl, this.nextSibling);
+          } else {
+            container.insertBefore(dragSrcEl, this);
+          }
+        }
+      });
+
+      container.appendChild(row);
+    }
+
+    function saveForm() {
+      const name = document.getElementById('form-name').value.trim();
+      const rows = document.querySelectorAll('.field-row');
+      const msg = document.getElementById('message');
+
+      if (!name) { msg.className='error'; msg.textContent='Form name is required.'; return; }
+      if (rows.length === 0) { msg.className='error'; msg.textContent='Add at least one field.'; return; }
+
+      const fields = [];
+      rows.forEach((row, i) => {
+        const label = row.querySelector('input').value.trim();
+        const field_type = row.querySelector('select').value;
+        if (label) fields.push({ label, field_type, order: i });
+      });
+
+      const url = EDIT_FORM_ID ? `/api/forms/${EDIT_FORM_ID}/` : '/api/forms/';
+      const method = EDIT_FORM_ID ? 'PUT' : 'POST';
+
+      fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ name, fields })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.id) {
+          msg.className = 'success';
+          msg.textContent = 'Form saved successfully!';
+          setTimeout(() => window.location.href = "{% url 'form_list' %}", 1000);
+        } else {
+          msg.className = 'error';
+          msg.textContent = JSON.stringify(data);
+        }
+      });
+    }
+
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie) {
+        document.cookie.split(';').forEach(c => {
+          c = c.trim();
+          if (c.startsWith(name + '=')) cookieValue = decodeURIComponent(c.slice(name.length + 1));
+        });
+      }
+      return cookieValue;
+    }
+  </script>
+</body>
+</html>
