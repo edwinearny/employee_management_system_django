@@ -12,7 +12,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
-        Profile.objects.create(user=user)  # auto-create profile
+        Profile.objects.create(user=user)
         return user
 
 

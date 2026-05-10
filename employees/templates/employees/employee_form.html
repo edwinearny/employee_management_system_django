@@ -16,26 +16,20 @@
   <h2>{% if employee %}Edit{% else %}Create{% endif %} Employee</h2>
   <p id="message"></p>
 
-  <div id="fields-container">
-    {% for field in employee_form.fields.all %}
-    <div class="field-group">
-      <label>{{ field.label }}</label>
-      {% if field.field_type == 'textarea' %}
-        <textarea name="field_{{ field.id }}" data-field-id="{{ field.id }}">{% if employee %}{% for fv in employee.field_values.all %}{% if fv.field.id == field.id %}{{ fv.value }}{% endif %}{% endfor %}{% endif %}</textarea>
-      {% else %}
-        <input type="{{ field.field_type }}"
-               name="field_{{ field.id }}"
-               data-field-id="{{ field.id }}"
-               value="{% if employee %}{% for fv in employee.field_values.all %}{% if fv.field.id == field.id %}{{ fv.value }}{% endif %}{% endfor %}{% endif %}">
-      {% endif %}
-    </div>
-    {% endfor %}
+  {% for field in employee_form.fields.all %}
+  <div class="field-group">
+    <label>{{ field.label }}</label>
+    {% if field.field_type == 'textarea' %}
+      <textarea data-field-id="{{ field.id }}">{% if employee %}{% for fv in employee.field_values.all %}{% if fv.field.id == field.id %}{{ fv.value }}{% endif %}{% endfor %}{% endif %}</textarea>
+    {% else %}
+      <input type="{{ field.field_type }}" data-field-id="{{ field.id }}"
+             value="{% if employee %}{% for fv in employee.field_values.all %}{% if fv.field.id == field.id %}{{ fv.value }}{% endif %}{% endfor %}{% endif %}">
+    {% endif %}
   </div>
+  {% endfor %}
 
   <br>
-  <button onclick="saveEmployee()">
-    {% if employee %}Update{% else %}Create{% endif %}
-  </button>
+  <button onclick="saveEmployee()">{% if employee %}Update{% else %}Create{% endif %}</button>
   <a href="{% url 'employee_list' %}" style="margin-left:10px">← Back</a>
 
   <script>
@@ -43,26 +37,15 @@
     const EMPLOYEE_ID = {{ employee.id|default:"null" }};
 
     function saveEmployee() {
-      const inputs = document.querySelectorAll('[data-field-id]');
-      const field_values = [];
       const msg = document.getElementById('message');
+      const field_values = [...document.querySelectorAll('[data-field-id]')].map(el => ({
+        field: el.dataset.fieldId,
+        value: el.value
+      }));
 
-      inputs.forEach(input => {
-        field_values.push({
-          field: input.dataset.fieldId,
-          value: input.value
-        });
-      });
-
-      const url = EMPLOYEE_ID ? `/api/employees/${EMPLOYEE_ID}/` : '/api/employees/';
-      const method = EMPLOYEE_ID ? 'PUT' : 'POST';
-
-      fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken'),
-        },
+      fetch(EMPLOYEE_ID ? `/api/employees/${EMPLOYEE_ID}/` : '/api/employees/', {
+        method: EMPLOYEE_ID ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
         credentials: 'include',
         body: JSON.stringify({ form: FORM_ID, field_values })
       })
@@ -70,7 +53,7 @@
       .then(data => {
         if (data.id) {
           msg.className = 'success';
-          msg.textContent = 'Employee saved successfully!';
+          msg.textContent = 'Employee saved!';
           setTimeout(() => window.location.href = "{% url 'employee_list' %}", 1000);
         } else {
           msg.className = 'error';
@@ -80,14 +63,12 @@
     }
 
     function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie) {
-        document.cookie.split(';').forEach(c => {
-          c = c.trim();
-          if (c.startsWith(name + '=')) cookieValue = decodeURIComponent(c.slice(name.length + 1));
-        });
-      }
-      return cookieValue;
+      let val = null;
+      document.cookie.split(';').forEach(c => {
+        c = c.trim();
+        if (c.startsWith(name + '=')) val = decodeURIComponent(c.slice(name.length + 1));
+      });
+      return val;
     }
   </script>
 </body>
